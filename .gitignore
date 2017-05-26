@@ -1,6 +1,5 @@
 .DS_Store
 Build
-santa-*
 Pods
 Santa.xcodeproj/xcuserdata
 Santa.xcodeproj/project.xcworkspace

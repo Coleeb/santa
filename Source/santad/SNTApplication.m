@@ -221,6 +221,10 @@
             }
             break;
           }
+          case ACTION_NOTIFY_FORK: {
+            [_eventLog logFork:message];
+            break;
+          }
           case ACTION_NOTIFY_EXEC: {
             [_eventLog logAllowedExecution:message];
             break;

@@ -163,6 +163,8 @@
 		C72E8D941D7F399900C86DD3 /* SNTCommandFileInfoTest.m in Sources */ = {isa = PBXBuildFile; fileRef = C72E8D931D7F399900C86DD3 /* SNTCommandFileInfoTest.m */; };
 		C73A4B9A1DC10753007B6789 /* SNTSyncdQueue.m in Sources */ = {isa = PBXBuildFile; fileRef = C7FB56FF1DBFC213004E14EF /* SNTSyncdQueue.m */; };
 		C73A4B9B1DC10758007B6789 /* SNTXPCSyncdInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = C7FB56F51DBFB480004E14EF /* SNTXPCSyncdInterface.m */; };
+		C73DD5171ED65D380003FE1C /* SantaMACFPolicy.cc in Sources */ = {isa = PBXBuildFile; fileRef = C77BA0EE1ED65A910005F569 /* SantaMACFPolicy.cc */; };
+		C74229B31ED65D550095D65F /* SantaMACFPolicy.h in Headers */ = {isa = PBXBuildFile; fileRef = C77BA0ED1ED65A910005F569 /* SantaMACFPolicy.h */; };
 		C7479F051E53704E0054C1CF /* SNTXPCBundleServiceInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = C7C721B01E23FF300051FAA6 /* SNTXPCBundleServiceInterface.m */; };
 		C7479F071E5374BF0054C1CF /* SNTXPCControlInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 0DCD605419115D17006B445C /* SNTXPCControlInterface.m */; };
 		C7479F091E5374E50054C1CF /* SNTRule.m in Sources */ = {isa = PBXBuildFile; fileRef = 0DE50F671912716A007B2B0C /* SNTRule.m */; };
@@ -434,6 +436,8 @@
 		C76614EB1D142D3C00D150C1 /* SNTCommandCheckCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SNTCommandCheckCache.m; sourceTree = "<group>"; };
 		C776A1051DEE160500A56616 /* SNTCommandSyncManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SNTCommandSyncManager.h; sourceTree = "<group>"; };
 		C776A1061DEE160500A56616 /* SNTCommandSyncManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SNTCommandSyncManager.m; sourceTree = "<group>"; };
+		C77BA0ED1ED65A910005F569 /* SantaMACFPolicy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SantaMACFPolicy.h; sourceTree = "<group>"; };
+		C77BA0EE1ED65A910005F569 /* SantaMACFPolicy.cc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = SantaMACFPolicy.cc; sourceTree = "<group>"; };
 		C78227541E1C3C58006EB2D6 /* santabs.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = santabs.xpc; sourceTree = BUILT_PRODUCTS_DIR; };
 		C795ED8E1D80A5BE007CFF42 /* SNTPolicyProcessor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SNTPolicyProcessor.h; sourceTree = "<group>"; };
 		C795ED8F1D80A5BE007CFF42 /* SNTPolicyProcessor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SNTPolicyProcessor.m; sourceTree = "<group>"; };
@@ -706,6 +710,8 @@
 				0D9A7F311759144800035EB5 /* SantaDriver.cc */,
 				0D9A7F361759148E00035EB5 /* SantaDriverClient.h */,
 				0D9A7F351759148E00035EB5 /* SantaDriverClient.cc */,
+				C77BA0ED1ED65A910005F569 /* SantaMACFPolicy.h */,
+				C77BA0EE1ED65A910005F569 /* SantaMACFPolicy.cc */,
 				0DA36C1F199EA46600A129D6 /* Resources */,
 			);
 			path = "santa-driver";
@@ -888,6 +894,7 @@
 				0D4644C6182AF81700098690 /* SantaDecisionManager.h in Headers */,
 				0D9A7F341759144800035EB5 /* SantaDriver.h in Headers */,
 				0D9A7F381759148E00035EB5 /* SantaDriverClient.h in Headers */,
+				C74229B31ED65D550095D65F /* SantaMACFPolicy.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1531,6 +1538,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C73DD5171ED65D380003FE1C /* SantaMACFPolicy.cc in Sources */,
 				0D9A7F331759144800035EB5 /* SantaDriver.cc in Sources */,
 				0D9A7F371759148E00035EB5 /* SantaDriverClient.cc in Sources */,
 				0D4644C5182AF81700098690 /* SantaDecisionManager.cc in Sources */,

@@ -17,6 +17,8 @@
 #define super OSObject
 OSDefineMetaClassAndStructors(SantaDecisionManager, OSObject);
 
+static SantaDecisionManager *santa_decision_manager_;
+
 #pragma mark Object Lifecycle
 
 bool SantaDecisionManager::init() {
@@ -31,6 +33,10 @@ bool SantaDecisionManager::init() {
 
   decision_cache_ = new SantaCache<uint64_t>(10000, 2);
   vnode_pid_map_ = new SantaCache<uint64_t>(2000, 5);
+
+  santa_decision_manager_ = this;
+  santa_macf_policy_ = new SantaMACFPolicy(&fork_handler);
+  fork_ppid_map_ = new SantaCache<uint64_t>();
 
   decision_dataqueue_ = IOSharedDataQueue::withEntries(
       kMaxDecisionQueueEvents, sizeof(santa_message_t));
@@ -51,6 +57,7 @@ bool SantaDecisionManager::init() {
 void SantaDecisionManager::free() {
   delete decision_cache_;
   delete vnode_pid_map_;
+  delete santa_macf_policy_;
 
   if (decision_dataqueue_lock_) {
     lck_mtx_free(decision_dataqueue_lock_, sdm_lock_grp_);
@@ -168,6 +175,8 @@ kern_return_t SantaDecisionManager::StartListener() {
       KAUTH_SCOPE_FILEOP, fileop_scope_callback, reinterpret_cast<void *>(this));
   if (!fileop_listener_) return kIOReturnInternalError;
 
+  santa_macf_policy_->StartListener();
+
   LOGD("Listeners started.");
 
   return kIOReturnSuccess;
@@ -179,6 +188,8 @@ kern_return_t SantaDecisionManager::StopListener() {
 
   kauth_unlisten_scope(fileop_listener_);
   fileop_listener_ = nullptr;
+
+  santa_macf_policy_->StopListener();
 
   // Wait for any active invocations to finish before returning
   do {
@@ -447,6 +458,16 @@ void SantaDecisionManager::FileOpCallback(
         message->pid = (val >> 32);
         message->ppid = (val & ~0xFFFFFFFF00000000);
       }
+
+      if (message->ppid > 1) {
+        pid_t fork_ppid = GetLastExecutedPPIDForPID(message->pid, 0);
+        if (fork_ppid > 1) {
+          message->ppid = fork_ppid;
+        }
+      }
+
+      fork_ppid_map_->set(message->pid, (1UL << 63 | message->ppid));
+
       PostToLogQueue(message);
       delete message;
       return;
@@ -485,6 +506,12 @@ void SantaDecisionManager::FileOpCallback(
     PostToLogQueue(message);
     delete message;
   }
+}
+
+pid_t SantaDecisionManager::GetLastExecutedPPIDForPID(pid_t pid, pid_t prev_pid) {
+  if (pid <= 1) return pid;
+  if (pid & (1LU << 63)) return prev_pid;
+  return GetLastExecutedPPIDForPID((pid_t)fork_ppid_map_->get(pid), pid);
 }
 
 #undef super
@@ -562,4 +589,8 @@ extern "C" int vnode_scope_callback(
   }
 
   return KAUTH_RESULT_DEFER;
+}
+
+extern "C" void fork_handler(kauth_cred_t cred, proc_t proc) {
+  santa_decision_manager_->fork_ppid_map_->set(proc_pid(proc), proc_ppid(proc));
 }

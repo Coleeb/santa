@@ -36,6 +36,8 @@
 	</dict>
 	<key>OSBundleLibraries</key>
 	<dict>
+		<key>com.apple.kpi.dsep</key>
+		<string>12.3</string>
 		<key>com.apple.kpi.bsd</key>
 		<string>9.0.0</string>
 		<key>com.apple.kpi.iokit</key>

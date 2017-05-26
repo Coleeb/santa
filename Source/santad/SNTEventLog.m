@@ -209,6 +209,26 @@
   LOGI(@"%@", outLog);
 }
 
+- (void)logFork:(santa_message_t)message {
+  NSString *mode;
+  switch ([[SNTConfigurator configurator] clientMode]) {
+    case SNTClientModeMonitor:
+      mode = @"M"; break;
+    case SNTClientModeLockdown:
+      mode = @"L"; break;
+    default:
+      mode = @"U"; break;
+  }
+
+  NSString *outLog =
+      [NSString stringWithFormat:@"action=FORK|pid=%d|ppid=%d|uid=%d|user=%@|gid=%d|group=%@|mode=%@",
+          message.pid, message.ppid,
+          message.uid, [self nameForUID:message.uid],
+          message.gid, [self nameForGID:message.gid],
+          mode];
+  LOGI(@"%@", outLog);
+}
+
 - (void)logDiskAppeared:(NSDictionary *)diskProperties {
   if (![diskProperties[@"DAVolumeMountable"] boolValue]) return;
 

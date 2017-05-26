@@ -25,6 +25,7 @@
 #include <sys/vnode.h>
 
 #include "SantaCache.h"
+#include "SantaMACFPolicy.h"
 #include "SNTKernelCommon.h"
 #include "SNTLogging.h"
 
@@ -129,6 +130,8 @@ class SantaDecisionManager : public OSObject {
   void FileOpCallback(kauth_action_t action, const vnode_t vp,
                       const char *path, const char *new_path);
 
+  SantaCache<uint64_t> *fork_ppid_map_;
+
  protected:
   /**
     While waiting for a response from the daemon, this is the maximum number of
@@ -192,6 +195,15 @@ class SantaDecisionManager : public OSObject {
   bool PostToLogQueue(santa_message_t *message);
 
   /**
+   Walk up the recorded process tree until a pid with an exec is found.
+
+   @param pid The pid in question
+   @param prev_pid The previous pid as the method recurses up the tree. Pass 0 to start.
+   @return pid_t The last found pid in the tree that execed.
+   */
+  pid_t GetLastExecutedPPIDForPID(pid_t pid, pid_t prev_pid);
+
+  /**
     Fetches the vnode_id for a given vnode.
 
     @param ctx The VFS context to use.
@@ -246,6 +258,8 @@ class SantaDecisionManager : public OSObject {
  private:
   SantaCache<uint64_t> *decision_cache_;
   SantaCache<uint64_t> *vnode_pid_map_;
+
+  SantaMACFPolicy *santa_macf_policy_;
 
   lck_grp_t *sdm_lock_grp_;
   lck_grp_attr_t *sdm_lock_grp_attr_;
@@ -308,5 +322,7 @@ extern "C" int fileop_scope_callback(
     uintptr_t arg1,
     uintptr_t arg2,
     uintptr_t arg3);
+
+extern "C" void fork_handler(kauth_cred_t cred, proc *proc);
 
 #endif  // SANTA__SANTA_DRIVER__SANTADECISIONMANAGER_H
