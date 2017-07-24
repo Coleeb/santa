@@ -15,28 +15,26 @@
 #import "SNTEventLog.h"
 
 #include <grp.h>
-#include <libproc.h>
 #include <pwd.h>
 #include <sys/sysctl.h>
 
-#import "MOLCertificate.h"
+#import "NSData+Zlib.h"
 #import "SNTCachedDecision.h"
-#import "SNTCommonEnums.h"
-#import "SNTConfigurator.h"
-#import "SNTFileInfo.h"
-#import "SNTKernelCommon.h"
-#import "SNTLogging.h"
+
+static uint64_t kMaxLogSize = 25 * 1024 * 1024; // ~25MB
+static uint64_t kMaxArchiveLogSize = 100 * 1024 * 1024; // ~100MB
 
 @interface SNTEventLog ()
-@property NSMutableDictionary<NSNumber *, SNTCachedDecision *> *detailStore;
-@property dispatch_queue_t detailStoreQueue;
-
-// Caches for uid->username and gid->groupname lookups.
-@property NSCache<NSNumber *, NSString *> *userNameMap;
-@property NSCache<NSNumber *, NSString *> *groupNameMap;
+@property(nonatomic, copy) NSString *logPath;
+@property(nonatomic) dispatch_source_t sighupSource;
+@property(nonatomic) dispatch_source_t deleteSource;
+@property(nonatomic) dispatch_queue_t writingQueue;
+@property NSFileHandle *fileHandle;
 @end
 
 @implementation SNTEventLog
+
+#pragma mark Initialization
 
 - (instancetype)init {
   self = [super init];
@@ -49,201 +47,111 @@
     _userNameMap.countLimit = 100;
     _groupNameMap = [[NSCache alloc] init];
     _groupNameMap.countLimit = 100;
+
+    _dateFormatter = [[NSDateFormatter alloc] init];
+    _dateFormatter.dateFormat = @"yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+    _dateFormatter.timeZone = [NSTimeZone timeZoneWithName:@"UTC"];
   }
   return self;
 }
+
+- (instancetype)initWithLogPath:(NSString *)logPath {
+  self = [self init];
+  if (self) {
+    _logPath = [logPath copy];
+
+    _writingQueue = dispatch_queue_create("com.google.santa.filelogqueue", DISPATCH_QUEUE_SERIAL);
+
+    [self setupFileHandle];
+
+    [self watchLogFile];
+
+    _sighupSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_SIGNAL, SIGHUP, 0, _writingQueue);
+    dispatch_source_set_event_handler(_sighupSource, ^{
+      [self rollOverFile];
+    });
+    dispatch_resume(_sighupSource);
+  }
+  return self;
+}
+
+#pragma mark Log File Methods
+
+- (void)watchLogFile {
+  self.deleteSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_VNODE,
+                                             _fileHandle.fileDescriptor,
+                                             DISPATCH_VNODE_DELETE | DISPATCH_VNODE_RENAME,
+                                             _writingQueue);
+  dispatch_source_set_event_handler(_deleteSource, ^{
+    [_fileHandle closeFile];
+    [self setupFileHandle];
+    [self watchLogFile];
+  });
+  dispatch_resume(_deleteSource);
+}
+
+- (void)setupFileHandle {
+  NSFileManager *fm = [NSFileManager defaultManager];
+  if (![fm fileExistsAtPath:self.logPath]) {
+    [fm createFileAtPath:self.logPath contents:nil attributes:nil];
+  }
+  self.fileHandle = [NSFileHandle fileHandleForWritingAtPath:self.logPath];
+  [self.fileHandle seekToEndOfFile];
+}
+
+- (void)rollOverFile {
+  NSTimeInterval ti = [[NSDate date] timeIntervalSince1970];
+  NSString *newName = [self.logPath stringByAppendingFormat:@".%llu", (uint64_t)ti];
+
+  [self.fileHandle closeFile];
+  if ([[NSFileManager defaultManager] moveItemAtPath:self.logPath
+                                              toPath:newName
+                                               error:NULL]) {
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+      [NSData compressFile:newName];
+      [self cleanUpOldLogs];
+    });
+  }
+  [self setupFileHandle];
+}
+
+- (void)cleanUpOldLogs {
+  NSString *logFile = [self.logPath lastPathComponent];
+  NSString *logDir = [self.logPath stringByDeletingLastPathComponent];
+  NSFileManager *fm = [NSFileManager defaultManager];
+  NSArray *files = [fm contentsOfDirectoryAtPath:logDir error:NULL];
+  NSPredicate *logPredicate = [NSPredicate predicateWithFormat:
+                                  @"SELF BEGINSWITH %@", [logFile stringByAppendingString:@"."]];
+  NSMutableArray *logs = [[files filteredArrayUsingPredicate:logPredicate] mutableCopy];
+  [logs sortUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
+  uint64_t totalSize = 0;
+  for (NSString *log in logs.reverseObjectEnumerator) {
+    NSFileHandle *fh = [NSFileHandle fileHandleForReadingAtPath:
+                           [logDir stringByAppendingPathComponent:log]];
+    totalSize += [fh seekToEndOfFile];
+    [fh closeFile];
+    if (totalSize >= kMaxArchiveLogSize) {
+      [fm removeItemAtPath:[logDir stringByAppendingPathComponent:log] error:NULL];
+    }
+  }
+}
+
+- (void)writeData:(NSData *)data {
+  if (!self.logPath) return;
+  dispatch_async(self.writingQueue, ^{
+    [self.fileHandle writeData:data];
+    if (self.fileHandle.offsetInFile >= kMaxLogSize) {
+      [self rollOverFile];
+    }
+  });
+}
+
+#pragma mark Detail Store
 
 - (void)saveDecisionDetails:(SNTCachedDecision *)cd {
   dispatch_sync(_detailStoreQueue, ^{
     _detailStore[@(cd.vnodeId)] = cd;
   });
-}
-
-- (void)logFileModification:(santa_message_t)message {
-  NSString *action, *newpath;
-
-  NSString *path = @(message.path);
-
-  switch (message.action) {
-    case ACTION_NOTIFY_DELETE: {
-      action = @"DELETE";
-      break;
-    }
-    case ACTION_NOTIFY_EXCHANGE: {
-      action = @"EXCHANGE";
-      newpath = @(message.newpath);
-      break;
-    }
-    case ACTION_NOTIFY_LINK: {
-      action = @"LINK";
-      newpath = @(message.newpath);
-      break;
-    }
-    case ACTION_NOTIFY_RENAME: {
-      action = @"RENAME";
-      newpath = @(message.newpath);
-      break;
-    }
-    case ACTION_NOTIFY_WRITE: {
-      action = @"WRITE";
-      break;
-    }
-    default: action = @"UNKNOWN"; break;
-  }
-
-  // init the string with 2k capacity to avoid reallocs
-  NSMutableString *outStr = [NSMutableString stringWithCapacity:2048];
-  [outStr appendFormat:@"action=%@|path=%@", action, [self sanitizeString:path]];
-  if (newpath) {
-    [outStr appendFormat:@"|newpath=%@", [self sanitizeString:newpath]];
-  }
-  char ppath[PATH_MAX] = "(null)";
-  proc_pidpath(message.pid, ppath, PATH_MAX);
-
-  [outStr appendFormat:@"|pid=%d|ppid=%d|process=%s|processpath=%s|uid=%d|user=%@|gid=%d|group=%@",
-                       message.pid, message.ppid, message.pname, ppath,
-                       message.uid, [self nameForUID:message.uid],
-                       message.gid, [self nameForGID:message.gid]];
-  LOGI(@"%@", outStr);
-}
-
-- (void)logDeniedExecution:(SNTCachedDecision *)cd withMessage:(santa_message_t)message {
-  [self logExecution:message withDecision:cd];
-}
-
-- (void)logAllowedExecution:(santa_message_t)message {
-  __block SNTCachedDecision *cd;
-  dispatch_sync(_detailStoreQueue, ^{
-    cd = _detailStore[@(message.vnode_id)];
-  });
-  [self logExecution:message withDecision:cd];
-}
-
-- (void)logExecution:(santa_message_t)message withDecision:(SNTCachedDecision *)cd {
-  NSString *d, *r;
-  BOOL logArgs = NO;
-
-  switch (cd.decision) {
-    case SNTEventStateAllowBinary:
-      d = @"ALLOW";
-      r = @"BINARY";
-      logArgs = YES;
-      break;
-    case SNTEventStateAllowCertificate:
-      d = @"ALLOW";
-      r = @"CERT";
-      logArgs = YES;
-      break;
-    case SNTEventStateAllowScope:
-      d = @"ALLOW";
-      r = @"SCOPE";
-      logArgs = YES;
-      break;
-    case SNTEventStateAllowUnknown:
-      d = @"ALLOW";
-      r = @"UNKNOWN";
-      logArgs = YES;
-      break;
-    case SNTEventStateBlockBinary:
-      d = @"DENY";
-      r = @"BINARY";
-      break;
-    case SNTEventStateBlockCertificate:
-      d = @"DENY";
-      r = @"CERT";
-      break;
-    case SNTEventStateBlockScope:
-      d = @"DENY";
-      r = @"SCOPE";
-      break;
-    case SNTEventStateBlockUnknown:
-      d = @"DENY";
-      r = @"UNKNOWN";
-      break;
-    default:
-      d = @"ALLOW";
-      r = @"NOTRUNNING";
-      logArgs = YES;
-      break;
-  }
-
-  // init the string with 4k capacity to avoid reallocs
-  NSMutableString *outLog = [[NSMutableString alloc] initWithCapacity:4096];
-  [outLog appendFormat:@"action=EXEC|decision=%@|reason=%@", d, r];
-
-  if (cd.decisionExtra) {
-    [outLog appendFormat:@"|explain=%@", cd.decisionExtra];
-  }
-
-  [outLog appendFormat:@"|sha256=%@|path=%@", cd.sha256, [self sanitizeString:@(message.path)]];
-
-  if (logArgs) {
-    [self addArgsForPid:message.pid toString:outLog];
-  }
-
-  if (cd.certSHA256) {
-    [outLog appendFormat:@"|cert_sha256=%@|cert_cn=%@", cd.certSHA256,
-                         [self sanitizeString:cd.certCommonName]];
-  }
-
-  if (cd.quarantineURL) {
-    [outLog appendFormat:@"|quarantine_url=%@", [self sanitizeString:cd.quarantineURL]];
-  }
-
-  NSString *mode;
-  switch ([[SNTConfigurator configurator] clientMode]) {
-    case SNTClientModeMonitor:
-      mode = @"M"; break;
-    case SNTClientModeLockdown:
-      mode = @"L"; break;
-    default:
-      mode = @"U"; break;
-  }
-
-  [outLog appendFormat:@"|pid=%d|ppid=%d|uid=%d|user=%@|gid=%d|group=%@|mode=%@",
-                       message.pid, message.ppid,
-                       message.uid, [self nameForUID:message.uid],
-                       message.gid, [self nameForGID:message.gid],
-                       mode];
-
-  LOGI(@"%@", outLog);
-}
-
-- (void)logDiskAppeared:(NSDictionary *)diskProperties {
-  if (![diskProperties[@"DAVolumeMountable"] boolValue]) return;
-
-  NSString *dmgPath = @"";
-  NSString *serial = @"";
-  if ([diskProperties[@"DADeviceModel"] isEqual:@"Disk Image"]) {
-    dmgPath = [self diskImageForDevice:diskProperties[@"DADevicePath"]];
-  } else {
-    serial = [self serialForDevice:diskProperties[@"DADevicePath"]];
-    serial = [serial stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-  }
-
-  NSString *model = [NSString stringWithFormat:@"%@ %@",
-                        diskProperties[@"DADeviceVendor"] ?: @"",
-                        diskProperties[@"DADeviceModel"] ?: @""];
-  model = [model stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]];
-
-  LOGI(@"action=DISKAPPEAR|mount=%@|volume=%@|bsdname=%@|fs=%@|model=%@|serial=%@|bus=%@|dmgpath=%@",
-       [diskProperties[@"DAVolumePath"] path] ?: @"",
-       diskProperties[@"DAVolumeName"] ?: @"",
-       diskProperties[@"DAMediaBSDName"] ?: @"",
-       diskProperties[@"DAVolumeKind"] ?: @"",
-       model ?: @"",
-       serial,
-       diskProperties[@"DADeviceProtocol"] ?: @"",
-       dmgPath);
-}
-
-- (void)logDiskDisappeared:(NSDictionary *)diskProperties {
-  if (![diskProperties[@"DAVolumeMountable"] boolValue]) return;
-
-  LOGI(@"action=DISKDISAPPEAR|mount=%@|volume=%@|bsdname=%@",
-       [diskProperties[@"DAVolumePath"] path] ?: @"",
-       diskProperties[@"DAVolumeName"] ?: @"",
-       diskProperties[@"DAMediaBSDName"]);
 }
 
 #pragma mark Helpers
@@ -268,6 +176,7 @@
   @return a new NSString with the replaced contents, if necessary, otherwise nil.
 */
 - (NSString *)sanitizeCString:(const char *)str ofLength:(NSUInteger)length {
+  if (!length) return nil;
   NSUInteger bufOffset = 0, strOffset = 0;
   char c = 0;
   char *buf = NULL;
@@ -336,7 +245,7 @@
 /**
   Use sysctl to get the arguments for a PID, appended to the given string.
 */
-- (void)addArgsForPid:(pid_t)pid toString:(NSMutableString *)str {
+- (void)addArgsForPid:(pid_t)pid toString:(NSMutableString *)str toArray:(NSMutableArray *)array {
   size_t argsSizeEstimate = 0, argsSize = 0, index = 0;
 
   // Use stack space up to 128KiB.
@@ -382,14 +291,28 @@
 
   // Save the beginning of the arguments
   size_t stringStart = index;
+  size_t previousStart = stringStart;
 
   // Replace all NULLs with spaces up until the first environment variable
   int replacedNulls = 0;
   for (; index < argsSize; ++index) {
     if (bytes[index] == '\0') {
       ++replacedNulls;
-      if (replacedNulls == argc) break;
-      bytes[index] = ' ';
+      if (str) {
+        if (replacedNulls == argc) break;
+        bytes[index] = ' ';
+      } else if (array) {
+        NSString *sanitized = [self sanitizeCString:&bytes[previousStart]
+                                           ofLength:index - previousStart];
+        if (!sanitized) {
+          sanitized = [[NSString alloc] initWithBytes:(const void *)&bytes[previousStart]
+                                               length:(index - previousStart)
+                                             encoding:NSUTF8StringEncoding];
+        }
+        [array addObject:sanitized];
+        if (replacedNulls == argc) break;
+        previousStart = index + 1;
+      }
     }
   }
 

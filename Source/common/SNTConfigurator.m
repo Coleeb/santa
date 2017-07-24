@@ -71,6 +71,9 @@ static NSString *const kMachineOwnerPlistKeyKey = @"MachineOwnerKey";
 static NSString *const kMachineIDPlistFileKey = @"MachineIDPlist";
 static NSString *const kMachineIDPlistKeyKey = @"MachineIDKey";
 
+static NSString *const kLogType = @"LogType";
+static NSString *const kLogPath = @"LogPath";
+
 - (instancetype)initWithFilePath:(NSString *)filePath {
   self = [super init];
   if (self) {
@@ -95,7 +98,7 @@ static NSString *const kMachineIDPlistKeyKey = @"MachineIDKey";
 
 - (NSArray *)protectedKeys {
   return @[ kClientModeKey, kWhitelistRegexKey, kBlacklistRegexKey,
-            kFileChangesRegexKey, kSyncBaseURLKey ];
+            kFileChangesRegexKey, kSyncBaseURLKey, kLogType, kLogPath ];
 }
 
 #pragma mark Public Interface
@@ -324,6 +327,14 @@ static NSString *const kMachineIDPlistKeyKey = @"MachineIDKey";
   }
 
   return machineId;
+}
+
+- (NSString *)logType {
+  return self.configData[kLogType];
+}
+
+- (NSString *)logDirPath {
+  return self.configData[kLogPath];
 }
 
 - (void)reloadConfigData {

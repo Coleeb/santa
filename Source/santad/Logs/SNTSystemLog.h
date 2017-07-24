@@ -1,4 +1,4 @@
-/// Copyright 2015 Google Inc. All rights reserved.
+/// Copyright 2017 Google Inc. All rights reserved.
 ///
 /// Licensed under the Apache License, Version 2.0 (the "License");
 /// you may not use this file except in compliance with the License.
@@ -12,24 +12,11 @@
 ///    See the License for the specific language governing permissions and
 ///    limitations under the License.
 
-@import Foundation;
-
-#import "SNTKernelCommon.h"
-
-@class SNTCachedDecision;
+#import "SNTEventLog.h"
 
 ///
-///  Logs execution and file write events to syslog
+///  Log to ASL or ULS depending on the SDK used to build Santa.
 ///
-@interface SNTEventLog : NSObject
-
-- (void)logDiskAppeared:(NSDictionary *)diskProperties;
-- (void)logDiskDisappeared:(NSDictionary *)diskProperties;
-
-- (void)logFileModification:(santa_message_t)message;
-
-- (void)saveDecisionDetails:(SNTCachedDecision *)cd;
-- (void)logDeniedExecution:(SNTCachedDecision *)cd withMessage:(santa_message_t)message;
-- (void)logAllowedExecution:(santa_message_t)message;
-
+@interface SNTSystemLog : SNTEventLog<SNTEventLogger>
+- (instancetype)initWithLogPath:(NSString *)logPath NS_UNAVAILABLE;
 @end

@@ -11,6 +11,8 @@ target :santad do
   pod 'FMDB'
   pod 'MOLCertificate'
   pod 'MOLCodesignChecker'
+  pod 'Protobuf'
+  pod '!ProtoCompiler'  
   target :santabs do
     pod 'FMDB'
     pod 'MOLCertificate'
@@ -24,6 +26,8 @@ target :santactl do
   pod 'MOLCertificate'
   pod 'MOLCodesignChecker'
   pod 'MOLFCMClient', '~> 1.3'
+  pod 'Protobuf'
+  pod '!ProtoCompiler'
 end
 
 target :LogicTests do
@@ -31,6 +35,8 @@ target :LogicTests do
   pod 'MOLAuthenticatingURLSession'
   pod 'MOLCertificate'
   pod 'MOLCodesignChecker'
+  pod 'Protobuf'
+  pod '!ProtoCompiler'
   pod 'OCMock'
 end
 
@@ -42,8 +48,7 @@ post_install do |installer|
       end
 
       # This is necessary to get FMDB to not NSLog stuff.
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ''
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] <<= "NDEBUG=1"
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = '$(inherited) NDEBUG=1'
 
       # Enable more compiler optimizations.
       config.build_settings['GCC_OPTIMIZATION_LEVEL'] = 'fast'

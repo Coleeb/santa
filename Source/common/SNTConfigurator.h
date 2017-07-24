@@ -202,6 +202,20 @@ extern NSString *const kDefaultConfigFilePath;
 @property(readonly, nonatomic) NSString *syncClientAuthCertificateIssuer;
 
 ///
+///  Defines the type of logging to be used by all the user-land components.
+///  Acceptable values are:
+///    File - Writes logs directly to a file.
+///    Proto - Writes protocol buffers to a file.
+///    System (default) - Uses ASL or ULS, depending on the SDK used to build Santa.
+///
+@property(readonly, nonatomic) NSString *logType;
+
+///
+///  The path to a file to write File and Proto logs.
+///
+@property(readonly, nonatomic) NSString *logPath;
+
+///
 ///  Retrieve an initialized singleton configurator object using the default file path.
 ///
 + (instancetype)configurator;

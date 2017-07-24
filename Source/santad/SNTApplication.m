@@ -25,7 +25,6 @@
 #import "SNTDatabaseController.h"
 #import "SNTDriverManager.h"
 #import "SNTDropRootPrivs.h"
-#import "SNTEventLog.h"
 #import "SNTEventTable.h"
 #import "SNTExecutionController.h"
 #import "SNTFileWatcher.h"
@@ -36,10 +35,14 @@
 #import "SNTXPCConnection.h"
 #import "SNTXPCControlInterface.h"
 
+#import "SNTSystemLog.h"
+#import "SNTProtoLog.h"
+#import "SNTFileLog.h"
+
 @interface SNTApplication ()
 @property DASessionRef diskArbSession;
 @property SNTDriverManager *driverManager;
-@property SNTEventLog *eventLog;
+@property id<SNTEventLogger> eventLog;
 @property SNTExecutionController *execController;
 @property SNTFileWatcher *configFileWatcher;
 @property SNTXPCConnection *controlConnection;
@@ -129,7 +132,7 @@
       }
     }];
 
-    _eventLog = [[SNTEventLog alloc] init];
+    _eventLog = [self logger];
 
     // Initialize the binary checker object
     _execController = [[SNTExecutionController alloc] initWithDriverManager:_driverManager
@@ -145,6 +148,19 @@
   }
 
   return self;
+}
+
+- (id<SNTEventLogger>)logger {
+  NSString *logType = [[SNTConfigurator configurator] logType];
+  if ([logType isEqualToString:@"File"]) {
+    NSString *logPath = [[SNTConfigurator configurator] logPath];
+    return [[SNTFileLog alloc] initWithLogPath:logPath];
+  } else if ([logType isEqualToString:@"Proto"]) {
+    NSString *logPath = [[SNTConfigurator configurator] logPath];
+    return [[SNTProtoLog alloc] initWithLogPath:logPath];
+  } else {
+    return [[SNTSystemLog alloc] init];
+  }
 }
 
 - (void)startSyncd {

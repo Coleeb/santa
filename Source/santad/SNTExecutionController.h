@@ -17,9 +17,10 @@
 #import "SNTCommonEnums.h"
 #include "SNTKernelCommon.h"
 
+#import "SNTEventLog.h"
+
 @class MOLCodesignChecker;
 @class SNTDriverManager;
-@class SNTEventLog;
 @class SNTEventTable;
 @class SNTNotificationQueue;
 @class SNTRuleTable;
@@ -40,7 +41,7 @@
                            eventTable:(SNTEventTable *)eventTable
                         notifierQueue:(SNTNotificationQueue *)notifierQueue
                            syncdQueue:(SNTSyncdQueue *)syncdQueue
-                             eventLog:(SNTEventLog *)eventLog;
+                             eventLog:(id<SNTEventLogger>)eventLog;
 
 ///
 ///  Handles the logic of deciding whether to allow the binary to run or not, sends the response to

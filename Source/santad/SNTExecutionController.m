@@ -28,7 +28,6 @@
 #import "SNTConfigurator.h"
 #import "SNTDriverManager.h"
 #import "SNTDropRootPrivs.h"
-#import "SNTEventLog.h"
 #import "SNTEventTable.h"
 #import "SNTFileInfo.h"
 #import "SNTNotificationQueue.h"
@@ -37,10 +36,11 @@
 #import "SNTRuleTable.h"
 #import "SNTStoredEvent.h"
 #import "SNTSyncdQueue.h"
+#import "SNTSystemLog.h"
 
 @interface SNTExecutionController ()
 @property SNTDriverManager *driverManager;
-@property SNTEventLog *eventLog;
+@property id<SNTEventLogger> eventLog;
 @property SNTEventTable *eventTable;
 @property SNTNotificationQueue *notifierQueue;
 @property SNTPolicyProcessor *policyProcessor;
@@ -59,7 +59,7 @@
                            eventTable:(SNTEventTable *)eventTable
                         notifierQueue:(SNTNotificationQueue *)notifierQueue
                            syncdQueue:(SNTSyncdQueue *)syncdQueue
-                             eventLog:(SNTEventLog *)eventLog {
+                             eventLog:(id<SNTEventLogger>)eventLog {
   self = [super init];
   if (self) {
     _driverManager = driverManager;
