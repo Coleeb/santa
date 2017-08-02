@@ -31,7 +31,6 @@ There are a four main components that make up Santa. There are documents explain
 
 There are also documents on concepts that support the workings of the main components.
 
-* [config](details/config.md): The config is a plist that holds the config state of Santa on disk. It lives here: `/var/db/santa/config.plist`.
 * [mode](details/mode.md): An operating mode, either Monitor or Lockdown.
 * [events](details/events.md): Represents an `exec()` that was blocked, or would have been blocked, depending on the mode.
 * [rules](details/rules.md): Represents allow or deny decisions for a given `exec()`. Can either be a binary's SHA-256 hash or a leaf code-signing certificate's SHA-256 hash.

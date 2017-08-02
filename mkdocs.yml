@@ -19,7 +19,6 @@ pages:
   - santad: details/santad.md
   - santactl: details/santactl.md
   - santa-gui: details/santa-gui.md
-  - config: details/config.md
   - mode: details/mode.md
   - events: details/events.md
   - rules: details/rules.md
