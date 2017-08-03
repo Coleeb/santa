@@ -28,7 +28,7 @@ There are a four main components that make up Santa. There are documents explain
 * TODO(bur) [santad](details/santad.md): A user-land root daemon that makes decisions on behalf of santa-driver requests.
 * TODO(bur) [santactl](details/santactl.md): A user-land anonymous daemon that communicates with a sync-server for configurations and policies. santactl can also be used to by a user to manually configure Santa when not using a sync-server.
 * TODO(bur) [santa-gui](details/santa-gui.md): A user-land GUI daemon that displays notifications when an `exec()` is blocked.
-
+* TODO(bur) [santabs](details/santabs.md): A user-land root daemon that finds Mach-O binaries within a bundle and creates events for them. 
 There are also documents on concepts that support the workings of the main components.
 
 * [mode](details/mode.md): An operating mode, either Monitor or Lockdown.
