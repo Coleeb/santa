@@ -34,9 +34,9 @@ Running Santa in Lockdown mode will stop any unknown binaries from running. Mean
 
 ##### Changing Modes
 
-There are two ways to change the running mode. One is by changing the config.plist. The `ClientMode` key is protected while Santa is running and will revert any attempt to change it.
+There are two ways to change the running mode. One is by changing the config.plist. The `ClientMode` key is protected while santad is running and will revert any attempt to change it.
 
-Change to __Monitor__ mode without a sync server:
+Change to __Monitor__ mode without a sync-server:
 
 ```sh
 sudo launchctl unload /Library/LaunchDaemons/com.google.santad.plist
@@ -44,7 +44,7 @@ sudo defaults write /var/db/santa/config.plist ClientMode -int 1
 sudo launchctl load /Library/LaunchDaemons/com.google.santad.plist
 ```
 
-Change to __Lockdown__ mode without a sync server:
+Change to __Lockdown__ mode without a sync-server:
 
 ```sh
 sudo launchctl unload /Library/LaunchDaemons/com.google.santad.plist
@@ -52,3 +52,6 @@ sudo defaults write /var/db/santa/config.plist ClientMode -int 2
 sudo launchctl load /Library/LaunchDaemons/com.google.santad.plist
 ```
 
+Change modes with a __sync-server__:
+
+The mode is set in the preflight sync stage. Use the key `client_mode` and a value of `MONITOR` or `LOCKDOWN`.
