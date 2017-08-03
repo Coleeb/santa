@@ -33,7 +33,7 @@ There are also documents on concepts that support the workings of the main compo
 
 * [mode](details/mode.md): An operating mode, either Monitor or Lockdown.
 * [events](details/events.md): Represents an `exec()` that was blocked, or would have been blocked, depending on the mode.
-* TODO(bur) [rules](details/rules.md): Represents allow or deny decisions for a given `exec()`. Can either be a binary's SHA-256 hash or a leaf code-signing certificate's SHA-256 hash.
+* [rules](details/rules.md): Represents allow or deny decisions for a given `exec()`. Can either be a binary's SHA-256 hash or a leaf code-signing certificate's SHA-256 hash.
 * TODO(bur) [scopes](details/scopes.md): The level at which an exec() was allowed or denied from taking place.
 * TODO(bur) [syncing](details/syncing.md): How Santa communicates with a TLS server for configuration, rules and event uploading.
 * TODO(bur) [ipc](details/ipc.md): How all the components of Santa communicate.
