@@ -40,9 +40,18 @@
   NSDictionary *resp = [self performRequest:[self requestWithDictionary:requestDict]];
   if (!resp) return NO;
 
+  // Bundle rules are not saved to the rules database. They are used only as an indicator
+  // to display a notification.
+  NSMutableArray *bundleRules = [NSMutableArray array];
+
   for (NSDictionary *rule in resp[kRules]) {
     SNTRule *r = [self ruleFromDictionary:rule];
-    if (r) [self.syncState.downloadedRules addObject:r];
+    if (!r) continue;
+    if (r.type == SNTRuleTypeBundle) {
+      [bundleRules addObject:r];
+    } else {
+      [self.syncState.downloadedRules addObject:r];
+    }
   }
 
   if (resp[kCursor]) {
@@ -74,6 +83,9 @@
   dispatch_semaphore_wait(sema, dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC));
 
   LOGI(@"Added %lu rules", self.syncState.downloadedRules.count);
+
+  // Add the bundle rules, if any.
+  if (bundleRules.count) [self.syncState.downloadedRules addObjectsFromArray:bundleRules];
 
   if (self.syncState.targetedRuleSync) {
     for (SNTRule *r in self.syncState.downloadedRules) {
@@ -115,6 +127,8 @@
     newRule.type = SNTRuleTypeBinary;
   } else if ([ruleTypeString isEqual:kRuleTypeCertificate]) {
     newRule.type = SNTRuleTypeCertificate;
+  } else if ([ruleTypeString isEqualToString:kRuleTypeBundle]) {
+    newRule.type = SNTRuleTypeBundle;
   } else {
     return nil;
   }

@@ -89,6 +89,9 @@ NSString *const kRuleSHA256 = @"sha256";
 NSString *const kRulePolicy = @"policy";
 NSString *const kRulePolicyWhitelist = @"WHITELIST";
 NSString *const kRulePolicyBlacklist = @"BLACKLIST";
+// The sync-server has the name "package" ingrained at this point. We are really dealing with
+// bundles, not packages.
+NSString *const kRuleTypeBundle = @"PACKAGE";
 NSString *const kRulePolicySilentBlacklist = @"SILENT_BLACKLIST";
 NSString *const kRulePolicyRemove = @"REMOVE";
 NSString *const kRuleType = @"rule_type";
