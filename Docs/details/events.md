@@ -151,3 +151,4 @@ To avoid redundant uploads of a bundle events Santa will wait for the sync-serve
 | event_upload_bundle_binaries | An array of bundle hashes that the sync-server needs to be uploaded |
 
 When santactl receives this request it sends an XPC reply to santad to save all the bundle events to the events.db. It then attempts to upload all the bundle events, purging the successes from the events.db. Any failures will be uploaded during the next full sync.
+
