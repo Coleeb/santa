@@ -36,5 +36,5 @@ There are also documents on concepts that support the workings of the main compo
 * [rules](details/rules.md): Represents allow or deny decisions for a given `exec()`. Can either be a binary's SHA-256 hash or a leaf code-signing certificate's SHA-256 hash.
 * [scopes](details/scopes.md): The level at which an exec() was allowed or denied from taking place.
 * TODO(bur) [syncing](details/syncing.md): How Santa communicates with a TLS server for configuration, rules and event uploading.
-* TODO(bur) [ipc](details/ipc.md): How all the components of Santa communicate.
+* [ipc](details/ipc.md): How all the components of Santa communicate.
 * TODO(bur) [logs](details/logs.md): What and where Santa logs.
