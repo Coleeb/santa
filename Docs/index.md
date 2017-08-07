@@ -24,7 +24,7 @@ For those who want even more details on how Santa works under the hood, this sec
 
 There are a five main components that make up Santa. There are documents explaining each piece in detail. Here is a quick one-liner on each component. These quick descriptions do not encompass all the jobs performed by each component, but do provide a quick look at the basic functionality utilized to achieve the goal of binary whitelisting/blacklisting.
 
-* TODO(bur) [santa-driver](details/santa-driver.md): A macOS kernel extension that participates in `exec()` decisions.
+* [santa-driver](details/santa-driver.md): A macOS kernel extension that participates in `exec()` decisions.
 * TODO(bur) [santad](details/santad.md): A user-land root daemon that makes decisions on behalf of santa-driver requests.
 * TODO(bur) [santactl](details/santactl.md): A user-land anonymous daemon that communicates with a sync-server for configurations and policies. santactl can also be used to by a user to manually configure Santa when not using a sync-server.
 * TODO(bur) [santa-gui](details/santa-gui.md): A user-land GUI daemon that displays notifications when an `exec()` is blocked.
